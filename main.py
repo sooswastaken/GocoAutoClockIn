@@ -105,12 +105,10 @@ async def ignore_404s(request, exception):
 
 async def clock_in():
     print("Clocking in...")
-    click_punch()
 
 
 async def clock_out():
     print("Clocking out...")
-    click_punch()
 
 
 if __name__ == "__main__":
