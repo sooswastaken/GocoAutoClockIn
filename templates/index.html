@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Clock In App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #232323;
+            color: #fff;
+        }
+        input[type="checkbox"], input[type="time"] {
+            width: 100px;
+            margin-right: 10px;
+            background-color: #333;
+            border: none;
+            color: #fff;
+        }
+        input[type="time"] {
+            padding: 5px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>Auto Clock In App Configuration</h1>
+    <table>
+        <tr>
+            <th>Day</th>
+            <th>Enabled</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+        </tr>
+        {% for day, settings in config.items() %}
+        <tr>
+            <td>{{ day.capitalize() }}</td>
+            <td><input type="checkbox" id="{{ day }}-enabled" {% if settings.enabled %}checked{% endif %}></td>
+            <td><input type="time" id="{{ day }}-start" value="{{ settings.start }}"></td>
+            <td><input type="time" id="{{ day }}-end" value="{{ settings.end }}"></td>
+        </tr>
+        {% endfor %}
+    </table>
+    <button onclick="saveConfig()">Save Configuration</button>
+    <button onclick="testPunch()">Test Punching</button>
+
+    <script>
+        function saveConfig() {
+            const config = {};
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+            days.forEach(day => {
+                const enabledElement = document.getElementById(`${day}-enabled`);
+                const startElement = document.getElementById(`${day}-start`);
+                const endElement = document.getElementById(`${day}-end`);
+
+                if (enabledElement && startElement && endElement) {
+                    config[day] = {
+                        enabled: enabledElement.checked,
+                        start: startElement.value,
+                        end: endElement.value
+                    };
+                }
+            });
+
+            fetch('/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Configuration saved successfully!');
+                } else {
+                    alert('Error saving configuration.');
+                }
+            });
+        }
+
+        function testPunch() {
+            fetch('/test', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Test punch successful!');
+                } else {
+                    alert('Error testing punch.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
