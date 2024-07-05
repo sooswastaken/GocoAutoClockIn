@@ -5,9 +5,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, time
 import json
 from utils import click_punch  # USE THIS
+from sanic.exceptions import NotFound
 
 app = Sanic("AutoClockInApp")
-jinja = SanicJinja2(app)
 scheduler = AsyncIOScheduler()
 
 
@@ -68,11 +68,6 @@ async def setup_scheduler(_, __):
     schedule_jobs()
 
 
-@app.route("/")
-async def index(request):
-    return jinja.render("index.html", request, config=config)
-
-
 @app.route("/update", methods=["POST"])
 async def update(request):
     global config
@@ -91,6 +86,21 @@ async def get_config(_):
 async def test_punch(_):
     click_punch(test=True)
     return response.json({"status": "success"})
+
+
+@app.route("/")
+async def index(_):
+    return await response.file("./frontend/dist/index.html")
+
+
+# serve /frontend/dist folder on /
+app.static("/", "./frontend/dist")
+
+
+# serve /frontend/dist/index.html for 404
+@app.exception(NotFound)
+async def ignore_404s(request, exception):
+    return await response.file("./frontend/dist/index.html")
 
 
 async def clock_in():

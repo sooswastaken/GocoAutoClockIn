@@ -1,0 +1,72 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #121212;
+    color: #e0e0e0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    background-color: #232323;
+    border-radius: 4px;
+    border: transparent 1px solid !important;
+}
+
+.time-picker {
+    transform: scale(0.9);
+}
+
+th, td {
+    border-radius: 10px;
+    padding: 6px;
+    text-align: left;
+}
+
+th {
+    padding: 20px;
+}
+
+th {
+    background-color: #232323;
+    color: #fff;
+}
+h1{
+    width: 100%;
+    text-align: center;
+    margin: 10% 0 30px;
+}
+.checkbox {
+}
+.test {
+    background-color: #323232 !important;
+    color: #fff !important;
+    margin: 15px !important;
+    border-radius: 2px !important;
+}
+.save {
+    background-color: #323232 !important;
+    color: #fff !important;
+    margin: 15px 0 !important;
+    border-radius: 2px !important;
+}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+        margin: 10px;
+    }
+
+    table, input[type="checkbox"], input[type="time"], button {
+        width: 100%;
+    }
+
+    .checkbox {
+    }
+
+    .test {
+        margin: 0px !important;
+    }
+}
