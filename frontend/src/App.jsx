@@ -18,30 +18,35 @@ function App() {
   const [config, setConfig] = useState({});
 
   useEffect(() => {
-    axios.get('/config')
-      .then(response => {
-        let data = {
-          "monday": {"enabled": true, "start": "08:35", "end": "17:30"},
-          "tuesday": {"enabled": true, "start": "08:35", "end": "17:30"},
-          "wednesday": {"enabled": true, "start": "08:35", "end": "17:30"},
-          "thursday": {"enabled": true, "start": "08:35", "end": "17:30"},
-          "friday": {"enabled": true, "start": "09:00", "end": "13:00"}
-        }
-                Object.keys(data).forEach(day => {
-          data[day].start = new Date(`1970-01-01T${data[day].start}:00`);
-          data[day].end = new Date(`1970-01-01T${data[day].end}:00`);
-        });
+    axios.get('/get-config')
+        .then(response => {
+          let data = response.data;
+          Object.keys(data).forEach(day => {
+            data[day].start = new Date(`1970-01-01T${data[day].start}:00`);
+            data[day].end = new Date(`1970-01-01T${data[day].end}:00`);
+          });
 
-        setConfig(data);
-        console.log(response)
-      })
-      .catch(error => {
-        console.error('Error fetching configuration:', error);
-      });
+          setConfig(data);
+          console.log(response)
+        })
+        .catch(error => {
+          console.error('Error fetching configuration:', error);
+        });
   }, []);
 
   const saveConfig = () => {
-    axios.post('/update', config)
+    console.log(config)
+    // turn back into military time
+    let data = {};
+    Object.keys(config).forEach(day => {
+      data[day] = {
+        enabled: config[day].enabled,
+        start: config[day].start.toTimeString().slice(0, 5),
+        end: config[day].end.toTimeString().slice(0, 5)
+      };
+    });
+    console.log(data)
+    axios.post('/update', data)
       .then(response => {
         if (response.data.status === 'success') {
           alert('Configuration saved successfully!');
