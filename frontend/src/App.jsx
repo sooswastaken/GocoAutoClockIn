@@ -50,6 +50,19 @@ function App() {
       .then(response => {
         if (response.data.status === 'success') {
           alert('Configuration saved successfully!');
+
+          // update the config state
+            axios.get('/get-config')
+            .then(response => {
+              let data = response.data;
+              Object.keys(data).forEach(day => {
+                data[day].start = new Date(`1970-01-01T${data[day].start}:00`);
+                data[day].end = new Date(`1970-01-01T${data[day].end}:00`);
+              });
+
+              setConfig(data);
+              console.log(response)
+            })
         } else {
           alert('Error saving configuration.');
         }
