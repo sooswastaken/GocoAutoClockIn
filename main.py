@@ -1,9 +1,11 @@
 import json
+import random
+
 from sanic import Sanic, response
 from sanic.exceptions import NotFound
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils import click_punch
 
 app = Sanic("AutoClockInApp")
@@ -19,6 +21,7 @@ def load_config():
             return json.load(f)
     except FileNotFoundError:
         default_config = {
+            "sunday": {"enabled": True, "start": "08:35", "end": "17:30"},
             "monday": {"enabled": True, "start": "08:35", "end": "17:30"},
             "tuesday": {"enabled": True, "start": "08:35", "end": "17:30"},
             "wednesday": {"enabled": True, "start": "08:35", "end": "17:30"},
@@ -48,10 +51,33 @@ def schedule_jobs():
     scheduler.remove_all_jobs()
     for day, settings in config.items():
         if settings['enabled']:
-            scheduler.add_job(click_punch, trigger='cron', day_of_week=day[:3], hour=settings['start'][:2],
-                              minute=settings['start'][3:], args=[False])
-            scheduler.add_job(click_punch, trigger='cron', day_of_week=day[:3], hour=settings['end'][:2],
-                              minute=settings['end'][3:], args=[False])
+            # Calculate random offsets for start and end times
+            start_offset = timedelta(minutes=random.randint(-3, 3))
+            end_offset = timedelta(minutes=random.randint(-3, 3))
+
+            # Calculate actual start and end times with offsets
+            start_time = datetime.strptime(settings['start'], "%H:%M") + start_offset
+            end_time = datetime.strptime(settings['end'], "%H:%M") + end_offset
+
+            # Schedule start job with random offset
+            scheduler.add_job(
+                click_punch,
+                trigger='cron',
+                day_of_week=day[:3],
+                hour=start_time.hour,
+                minute=start_time.minute,
+                args=[False]
+            )
+
+            # Schedule end job with random offset
+            scheduler.add_job(
+                click_punch,
+                trigger='cron',
+                day_of_week=day[:3],
+                hour=end_time.hour,
+                minute=end_time.minute,
+                args=[True]
+            )
 
 
 @app.route("/update", methods=["POST"])
