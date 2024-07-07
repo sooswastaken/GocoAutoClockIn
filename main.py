@@ -1,114 +1,96 @@
-from pytz import timezone
-from sanic import Sanic, response
-from sanic_jinja2 import SanicJinja2
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, time
 import json
-from utils import click_punch  # USE THIS
+from sanic import Sanic, response
 from sanic.exceptions import NotFound
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from datetime import datetime
+from utils import click_punch
 
 app = Sanic("AutoClockInApp")
+
+# Create the scheduler outside to be available globally
 scheduler = AsyncIOScheduler()
 
 
-# Load configuration
+# Load and save configuration
 def load_config():
     try:
         with open("config.json", "r") as f:
             return json.load(f)
     except FileNotFoundError:
-        data = {
+        default_config = {
             "monday": {"enabled": True, "start": "08:35", "end": "17:30"},
             "tuesday": {"enabled": True, "start": "08:35", "end": "17:30"},
             "wednesday": {"enabled": True, "start": "08:35", "end": "17:30"},
             "thursday": {"enabled": True, "start": "08:35", "end": "17:30"},
-            "friday": {"enabled": True, "start": "09:00", "end": "13:00"},
+            "friday": {"enabled": True, "start": "09:00", "end": "13:00"}
         }
-
-        # save the default configuration
         with open("config.json", "w") as f:
-            json.dump(data, f, indent=2)
-        return data
+            json.dump(default_config, f, indent=2)
+        return default_config
+
+
+def save_config(_config):
+    with open("config.json", "w") as f:
+        json.dump(_config, f, indent=2)
 
 
 config = load_config()
 
 
-# Save configuration
-def save_config():
-    with open("config.json", "w") as f:
-        json.dump(config, f, indent=2)
-
-
-eastern = timezone('US/Eastern')
+@app.listener('before_server_start')
+async def setup_scheduler(app, loop):
+    scheduler.start()
+    schedule_jobs()
 
 
 def schedule_jobs():
     scheduler.remove_all_jobs()
-    local_tz = datetime.now().astimezone().tzinfo  # Get server's local timezone
-
     for day, settings in config.items():
-        if settings["enabled"]:
-            start_time_est = datetime.strptime(settings["start"], '%H:%M').replace(tzinfo=eastern)
-            end_time_est = datetime.strptime(settings["end"], '%H:%M').replace(tzinfo=eastern)
-
-            # Convert EST to local time
-            start_time_local = start_time_est.astimezone(local_tz)
-            end_time_local = end_time_est.astimezone(local_tz)
-
-            scheduler.add_job(clock_in, 'cron', day_of_week=day[:3],
-                              hour=start_time_local.hour, minute=start_time_local.minute)
-            scheduler.add_job(clock_out, 'cron', day_of_week=day[:3],
-                              hour=end_time_local.hour, minute=end_time_local.minute)
-
-
-@app.listener('before_server_start')
-async def setup_scheduler(_, __):
-    scheduler.start()
-    schedule_jobs()
+        if settings['enabled']:
+            scheduler.add_job(click_punch, trigger='cron', day_of_week=day[:3], hour=settings['start'][:2],
+                              minute=settings['start'][3:], args=[False])
+            scheduler.add_job(click_punch, trigger='cron', day_of_week=day[:3], hour=settings['end'][:2],
+                              minute=settings['end'][3:], args=[False])
 
 
 @app.route("/update", methods=["POST"])
 async def update(request):
     global config
     config = request.json
-    save_config()
+    save_config(config)
     schedule_jobs()
     return response.json({"status": "success"})
 
 
+@app.route("/get-scheduled-jobs")
+async def get_scheduled_jobs(request):
+    jobs = scheduler.get_jobs()
+    return response.text("\n".join([f"{job.trigger}: {job.func}" for job in jobs]))
+
+
 @app.route("/get-config")
-async def get_config(_):
+async def get_config(request):
     return response.json(config)
 
 
 @app.route("/test", methods=["POST"])
-async def test_punch(_):
+async def test_punch(request):
     click_punch(test=True)
     return response.json({"status": "success"})
 
 
 @app.route("/")
-async def index(_):
+async def index(request):
     return await response.file("./frontend/dist/index.html")
 
 
-# serve /frontend/dist folder on /
 app.static("/", "./frontend/dist")
 
 
-# serve /frontend/dist/index.html for 404
 @app.exception(NotFound)
 async def ignore_404s(request, exception):
     return await response.file("./frontend/dist/index.html")
-
-
-async def clock_in():
-    print("Clocking in...")
-
-
-async def clock_out():
-    print("Clocking out...")
 
 
 if __name__ == "__main__":
